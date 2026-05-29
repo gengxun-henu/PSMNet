@@ -54,6 +54,25 @@ from .submodule import *
 from .cost_volume import residual_cost_volume_2d
 
 
+def _disp_regression(prob, num_disp):
+    """Soft-argmin disparity regression.
+
+    Equivalent to ``disparityregression(num_disp)(prob)`` but avoids
+    instantiating a new module (and re-allocating a buffer) on every call.
+    Works on any device/dtype automatically.
+
+    Args:
+        prob     : [B, num_disp, H, W] – softmax probability volume
+        num_disp : int – number of disparity levels
+
+    Returns:
+        [B, 1, H, W] – weighted expected disparity index
+    """
+    idx = torch.arange(num_disp, dtype=prob.dtype, device=prob.device
+                       ).view(1, num_disp, 1, 1)
+    return torch.sum(prob * idx, dim=1, keepdim=True)
+
+
 class hourglass(nn.Module):
     def __init__(self, inplanes):
         super(hourglass, self).__init__()
@@ -250,11 +269,11 @@ class PSMNet(nn.Module):
 
             cost1 = torch.squeeze(cost1, 1)
             pred1 = F.softmax(cost1, dim=1)
-            pred1 = disparityregression(num_disp)(pred1)
+            pred1 = _disp_regression(pred1, num_disp)
 
             cost2 = torch.squeeze(cost2, 1)
             pred2 = F.softmax(cost2, dim=1)
-            pred2 = disparityregression(num_disp)(pred2)
+            pred2 = _disp_regression(pred2, num_disp)
 
         cost3 = F.interpolate(cost3, [num_disp_pad, img_h, img_w],
                               mode='trilinear', align_corners=False)
@@ -264,7 +283,7 @@ class PSMNet(nn.Module):
         pred3 = F.softmax(cost3, dim=1)
         # 'softmax(c)' learns "similarity"; 'softmax(-c)' learns 'matching cost'.
         # Either works due to feature-based cost volume flexibility.
-        pred3 = disparityregression(num_disp)(pred3)
+        pred3 = _disp_regression(pred3, num_disp)
 
         if self.training:
             return pred1, pred2, pred3
