@@ -5,6 +5,12 @@ import random
 __imagenet_stats = {'mean': [0.485, 0.456, 0.406],
                    'std': [0.229, 0.224, 0.225]}
 
+# Single-channel normalization stats for grayscale imagery (e.g. LRO NAC).
+# Values approximate the grayscale equivalent of ImageNet stats; can be
+# overridden via the get_transform() interface.
+__grayscale_stats = {'mean': [0.445],
+                     'std': [0.269]}
+
 #__imagenet_stats = {'mean': [0.5, 0.5, 0.5],
 #                   'std': [0.5, 0.5, 0.5]}
 
@@ -74,8 +80,18 @@ def inception_color_preproccess(input_size, normalize=__imagenet_stats):
 
 
 def get_transform(name='imagenet', input_size=None,
-                  scale_size=None, normalize=None, augment=True):
-    normalize = __imagenet_stats
+                  scale_size=None, normalize=None, augment=True,
+                  grayscale=False):
+    """Return a composed transform pipeline.
+
+    Args:
+        grayscale (bool): If True, use single-channel normalization stats
+            suitable for grayscale imagery (e.g. LRO NAC).  The caller is
+            responsible for converting the PIL image to mode 'L' before
+            passing it through this transform.  Default is False (RGB).
+    """
+    if normalize is None:
+        normalize = __grayscale_stats if grayscale else __imagenet_stats
     input_size = 256
     if augment:
             return inception_color_preproccess(input_size, normalize=normalize)
