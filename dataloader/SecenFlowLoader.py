@@ -21,6 +21,10 @@ def is_image_file(filename):
 def default_loader(path):
     return Image.open(path).convert('RGB')
 
+def grayscale_loader(path):
+    """Load image as single-channel grayscale (for LRO NAC imagery)."""
+    return Image.open(path).convert('L')
+
 def disparity_loader(path):
     return rp.readPFM(path)
 

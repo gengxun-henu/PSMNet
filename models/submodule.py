@@ -45,17 +45,27 @@ class BasicBlock(nn.Module):
 class disparityregression(nn.Module):
     def __init__(self, maxdisp):
         super(disparityregression, self).__init__()
-        self.disp = torch.Tensor(np.reshape(np.array(range(maxdisp)),[1, maxdisp,1,1])).cuda()
+        self.register_buffer(
+            'disp',
+            torch.Tensor(np.reshape(np.array(range(maxdisp)), [1, maxdisp, 1, 1]))
+        )
 
     def forward(self, x):
-        out = torch.sum(x*self.disp.data,1, keepdim=True)
+        out = torch.sum(x * self.disp, 1, keepdim=True)
         return out
 
 class feature_extraction(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=3):
+        """Feature extraction network.
+
+        Args:
+            in_channels (int): Number of input channels. Default is 3 (RGB).
+                For DEM mode with grayscale NAC + N geometry channels, use 1+N
+                (e.g. 1+5=6 for slope, cosθ, nx, ny, nz).
+        """
         super(feature_extraction, self).__init__()
         self.inplanes = 32
-        self.firstconv = nn.Sequential(convbn(3, 32, 3, 2, 1, 1),
+        self.firstconv = nn.Sequential(convbn(in_channels, 32, 3, 2, 1, 1),
                                        nn.ReLU(inplace=True),
                                        convbn(32, 32, 3, 1, 1, 1),
                                        nn.ReLU(inplace=True),
